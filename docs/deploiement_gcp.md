@@ -69,6 +69,27 @@ les référentiels, puis les chaînes complètes Contrats, Sinistres et Interact
 (staging → entreprise → produit → vues d'usage), y compris les rejets dans
 `ops.rejects` et le journal dans `ops.pipeline_runs`.
 
+## Orchestration quotidienne gratuite (requête programmée BigQuery)
+
+Le déploiement crée une **requête programmée BigQuery** (`yoda-daily-full-chain-<env>`)
+qui rejoue chaque jour à **05:00 UTC** la chaîne complète — staging, modèles
+d'entreprise, snapshots produits du jour, journal d'exécution — via le compte
+de service pipeline (`sql/orchestration/daily_full_chain.sql`, provisionnée par
+`infra/scheduler.tf`). Coût : **0 €** (service gratuit, octets analysés dans le
+palier gratuit de 1 To/mois).
+
+- **La voir / la déclencher à la main** : console → BigQuery → *Requêtes
+  programmées* (ou *Scheduled queries*) → `yoda-daily-full-chain-dev` →
+  « Planifier une exécution » / « Run now ».
+- **Suivre les exécutions** : même écran, onglet historique — plus la table
+  `ops.pipeline_runs` (une ligne `daily_full_chain_scheduled` par jour) et les
+  nouvelles partitions quotidiennes de `product_contract.active_contracts_daily`
+  et `product_claim.claims_daily`.
+
+C'est l'équivalent fonctionnel du DAG Composer pour ce périmètre ; le DAG
+(`dags/contracts_active_daily.py`) reste la cible industrielle avec capteurs
+de fichiers, contrôles d'ingestion et reprises fines.
+
 ## Et l'orchestration Composer ?
 
 Le DAG `dags/contracts_active_daily.py` nécessite un environnement

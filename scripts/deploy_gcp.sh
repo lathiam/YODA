@@ -38,10 +38,16 @@ terraform version | head -1
 echo "== 1/5 Activation des APIs nécessaires =="
 gcloud services enable \
   bigquery.googleapis.com \
+  bigquerydatatransfer.googleapis.com \
   storage.googleapis.com \
   iam.googleapis.com \
   cloudresourcemanager.googleapis.com \
   --project "${PROJECT_ID}"
+# Agent de service du Data Transfer Service (requêtes programmées) : doit
+# exister avant que Terraform lui accorde l'impersonation du SA pipeline.
+gcloud beta services identity create \
+  --service=bigquerydatatransfer.googleapis.com \
+  --project "${PROJECT_ID}" || true
 
 echo "== 2/5 Bucket d'état Terraform =="
 gcloud storage buckets describe "gs://${PROJECT_ID}-tfstate" --project "${PROJECT_ID}" >/dev/null 2>&1 \
