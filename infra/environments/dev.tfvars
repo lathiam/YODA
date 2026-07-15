@@ -1,4 +1,4 @@
-project_id  = "yoda-mnv-dev"
+project_id  = "yoda-data-2026"
 environment = "dev"
 region      = "europe-west1"
 # bi_readers_group     = "bi-readers-dev@bpce-assurances.example"

@@ -3,11 +3,11 @@
 environment: dev
 
 gcp:
-  project_id: yoda-mnv-dev
+  project_id: yoda-data-2026
   region: europe-west1
-  landing_bucket: yoda-mnv-dev-landing
-  archive_bucket: yoda-mnv-dev-archive
-  composer_dag_bucket: yoda-mnv-dev-composer-dags
+  landing_bucket: yoda-data-2026-landing
+  archive_bucket: yoda-data-2026-archive
+  composer_dag_bucket: yoda-data-2026-composer-dags
 
 datasets:
   app_impulse: app_impulse

@@ -28,8 +28,9 @@ gcloud services enable \
   --project "${PROJECT_ID}"
 
 echo "== 2/5 Bucket d'état Terraform =="
-gsutil ls -b "gs://${PROJECT_ID}-tfstate" 2>/dev/null \
-  || gsutil mb -l "${REGION}" -p "${PROJECT_ID}" "gs://${PROJECT_ID}-tfstate"
+gcloud storage buckets describe "gs://${PROJECT_ID}-tfstate" --project "${PROJECT_ID}" >/dev/null 2>&1 \
+  || gcloud storage buckets create "gs://${PROJECT_ID}-tfstate" \
+       --location "${REGION}" --project "${PROJECT_ID}"
 
 echo "== 3/5 Infrastructure (datasets, tables ops, buckets, IAM) =="
 terraform -chdir=infra init -backend-config="bucket=${PROJECT_ID}-tfstate"
@@ -44,8 +45,9 @@ bq --project_id="${PROJECT_ID}" load --replace \
   enterprise_referential.products \
   data/samples/referential_products.csv \
   product_code:STRING,product_family:STRING,product_label:STRING
-gsutil cp data/samples/impulse_contracts_20260713.csv \
-  "gs://${PROJECT_ID}-landing/impulse/contracts/20260713/impulse_contracts_20260713.csv"
+gcloud storage cp data/samples/impulse_contracts_20260713.csv \
+  "gs://${PROJECT_ID}-landing/impulse/contracts/20260713/impulse_contracts_20260713.csv" \
+  --project "${PROJECT_ID}"
 
 echo "== 5/5 Contrôles post-déploiement =="
 bq --project_id="${PROJECT_ID}" query --use_legacy_sql=false \
