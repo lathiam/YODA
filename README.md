@@ -69,10 +69,13 @@ métadonnées d'exécution (`run_id`, volumes, statut) — mêmes principes qu'e
 
 ### Exécution cible sur GCP
 
-1. Provisionner l'infrastructure : `cd infra && terraform apply -var-file=environments/dev.tfvars`
-2. Déployer les DAGs vers le bucket Composer (fait par la CI, voir `pipeline.yml`)
-3. Le DAG `contracts_active_daily` orchestre : capteur fichier → contrôles d'ingestion →
-   chargement raw → staging → modèle d'entreprise → produit Data → tests qualité → publication.
+Guide complet : [docs/deploiement_gcp.md](docs/deploiement_gcp.md)
+
+- **En un passage (Cloud Shell)** : `bash scripts/deploy_gcp.sh dev`
+- **En continu (Cloud Build)** : déclencheur sur ce dépôt avec `cloudbuild.yaml`
+- Le DAG `contracts_active_daily` (Composer, optionnel) orchestre : capteur fichier →
+  contrôles d'ingestion → chargement raw → staging → modèle d'entreprise →
+  produit Data → tests qualité → publication.
 
 ## Principes appliqués (documentation §11.1)
 

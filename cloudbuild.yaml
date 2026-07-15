@@ -1,0 +1,90 @@
+# Déploiement continu YODA via Google Cloud Build (app GitHub déjà connectée).
+# Créer un déclencheur sur ce dépôt (voir docs/deploiement_gcp.md) : chaque push
+# sur la branche suivie exécute tests -> infrastructure -> données de référence.
+#
+# Substitutions :
+#   _ENV             : dev (défaut), preprod ou prod
+#   _REGION          : région GCP (europe-west1 par défaut)
+#   _COMPOSER_BUCKET : bucket DAGs d'un environnement Composer existant
+#                      (vide = étape ignorée, Composer est optionnel et payant)
+
+substitutions:
+  _ENV: "dev"
+  _REGION: "europe-west1"
+  _COMPOSER_BUCKET: ""
+
+steps:
+  # 1. Vérification : lint + tests + pipeline démo sur données synthétiques
+  - id: tests
+    name: python:3.11-slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        pip install --quiet -r requirements/dev.txt
+        ruff check src tests dags
+        pytest tests -q
+        PYTHONPATH=src python -m yoda.pipeline --env dev \
+          --business-date 2026-07-13 \
+          --source-file data/samples/impulse_contracts_20260713.csv
+
+  # 2. Bucket d'état Terraform (créé au premier passage seulement)
+  - id: tfstate-bucket
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gsutil ls -b "gs://${PROJECT_ID}-tfstate" 2>/dev/null \
+          || gsutil mb -l "${_REGION}" "gs://${PROJECT_ID}-tfstate"
+
+  # 3. Infrastructure : datasets BigQuery, tables ops, buckets, IAM
+  - id: terraform
+    name: hashicorp/terraform:1.9
+    dir: infra
+    entrypoint: sh
+    args:
+      - -ceu
+      - |
+        terraform init -backend-config="bucket=${PROJECT_ID}-tfstate"
+        terraform apply -auto-approve \
+          -var "project_id=${PROJECT_ID}" \
+          -var "environment=${_ENV}" \
+          -var "region=${_REGION}"
+
+  # 4. Référentiel produits + dépôt du fichier d'exemple dans le landing
+  - id: seed-data
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        bq --project_id="${PROJECT_ID}" load --replace \
+          --source_format=CSV --field_delimiter=';' --skip_leading_rows=1 \
+          enterprise_referential.products \
+          data/samples/referential_products.csv \
+          product_code:STRING,product_family:STRING,product_label:STRING
+        gsutil cp data/samples/impulse_contracts_20260713.csv \
+          "gs://${PROJECT_ID}-landing/impulse/contracts/20260713/impulse_contracts_20260713.csv"
+        echo "Contrôle:" \
+          && bq --project_id="${PROJECT_ID}" query --use_legacy_sql=false \
+          "SELECT COUNT(*) AS produits FROM \`${PROJECT_ID}.enterprise_referential.products\`"
+
+  # 5. Optionnel : synchronisation des DAGs vers un Composer existant
+  - id: sync-dags
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ -n "${_COMPOSER_BUCKET}" ]; then
+          gsutil -m rsync -r dags/ "gs://${_COMPOSER_BUCKET}/dags/"
+          gsutil -m rsync -r sql/ "gs://${_COMPOSER_BUCKET}/dags/sql/"
+        else
+          echo "Pas de bucket Composer configuré — étape ignorée (voir docs/deploiement_gcp.md)."
+        fi
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
