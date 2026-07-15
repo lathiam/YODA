@@ -91,17 +91,19 @@ bq --project_id="${PROJECT_ID}" query --use_legacy_sql=false \
   "SELECT 'referentiel_produits' AS objet, COUNT(*) AS lignes
    FROM \`${PROJECT_ID}.enterprise_referential.products\`"
 echo "Datasets créés :"
-bq --project_id="${PROJECT_ID}" ls | head -15
+bq --project_id="${PROJECT_ID}" ls --max_results=30
 
 cat <<EOF
 
 == Déploiement terminé ==
-- Datasets BigQuery : app_impulse, enterprise_referential, enterprise_contract,
-  product_contract, usage_bi, ops
-- Buckets : gs://${PROJECT_ID}-landing (fichier d'exemple déposé),
-  gs://${PROJECT_ID}-archive
+- 18 datasets BigQuery couvrant toutes les couches (applicatif, entreprise,
+  produits, usages, ops)
+- Buckets : gs://${PROJECT_ID}-landing, gs://${PROJECT_ID}-archive
 - Compte de service pipeline : yoda-pipeline-${ENV}@${PROJECT_ID}.iam.gserviceaccount.com
+- Orchestration quotidienne : requête programmée yoda-daily-full-chain-${ENV}
+  (tous les jours 05:00 UTC, gratuite — console > BigQuery > Requêtes programmées)
 
-Étape suivante (optionnelle, ~350 EUR/mois) : créer un environnement Cloud
-Composer pour orchestrer le DAG — voir docs/deploiement_gcp.md.
+Étapes suivantes :
+- Charger/rafraîchir les données simulées : bash scripts/seed_bigquery.sh ${ENV}
+- Composer (optionnel, ~350 EUR/mois) : voir docs/deploiement_gcp.md
 EOF
