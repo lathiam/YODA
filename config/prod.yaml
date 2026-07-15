@@ -1,0 +1,27 @@
+# Environnement PROD — exécution officielle, supervision renforcée.
+environment: prod
+
+gcp:
+  project_id: yoda-mnv-prod
+  region: europe-west1
+  landing_bucket: yoda-mnv-prod-landing
+  archive_bucket: yoda-mnv-prod-archive
+  composer_dag_bucket: yoda-mnv-prod-composer-dags
+
+datasets:
+  app_impulse: app_impulse
+  enterprise_contract: enterprise_contract
+  product_contract: product_contract
+  usage_bi: usage_bi
+  ops: ops
+
+local:
+  output_dir: data/output
+  referential_products: data/samples/referential_products.csv
+
+quality:
+  freshness_sla_hours: 24
+  max_reject_ratio: 0.05
+
+alerting:
+  channel: monitoring_oncall

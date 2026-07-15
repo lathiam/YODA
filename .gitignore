@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Sorties de la démo locale (données générées, jamais versionnées)
+data/output/
+
+# Terraform
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.backup
+infra/**/.terraform.lock.hcl
+infra/**/crash.log
+
+# Secrets — ne jamais committer
+*.json.key
+*.pem
+.env
+.env.*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store

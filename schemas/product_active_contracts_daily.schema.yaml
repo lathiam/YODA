@@ -1,0 +1,31 @@
+# Schéma du produit Data product_contract.active_contracts_daily (documentation §9.5).
+# Granularité : 1 ligne par (contract_id, snapshot_date).
+# Partitionnement BigQuery : snapshot_date ; clustering : product_code, channel_code.
+
+table: product_contract.active_contracts_daily
+granularity: [contract_id, snapshot_date]
+partitioning: snapshot_date
+clustering: [product_code, channel_code]
+
+columns:
+  - {name: snapshot_date,      type: DATE,    description: "Date de photographie du portefeuille"}
+  - {name: contract_id,        type: STRING,  description: "Identifiant métier stable du contrat"}
+  - {name: customer_id,        type: STRING,  description: "Identifiant client pseudonymisé (SHA-256)"}
+  - {name: product_code,       type: STRING,  description: "Code produit normalisé (référentiel central)"}
+  - {name: contract_status,    type: STRING,  description: "Statut métier harmonisé: ACTIVE, SUSPENDED, TERMINATED, CANCELLED"}
+  - {name: start_date,         type: DATE,    description: "Date d'effet du contrat"}
+  - {name: end_date,           type: DATE,    description: "Date de fin ou résiliation (NULL si aucune)"}
+  - {name: annual_premium,     type: NUMERIC, description: "Prime annualisée EUR selon la règle validée"}
+  - {name: channel_code,       type: STRING,  description: "Canal de souscription"}
+  - {name: is_active,          type: BOOLEAN, description: "Résultat de la règle métier d'activité au snapshot_date"}
+  - {name: source_system,      type: STRING,  description: "Système d'origine (IMPULSE)"}
+  - {name: ingestion_batch_id, type: STRING,  description: "Identifiant du lot d'ingestion (traçabilité)"}
+
+quality_checks:
+  - {name: not_null_contract_id,            severity: CRITICAL}
+  - {name: unique_contract_id_snapshot,     severity: CRITICAL}
+  - {name: start_date_before_end_date,      severity: HIGH}
+  - {name: annual_premium_positive,         severity: HIGH}
+  - {name: product_code_in_referential,     severity: HIGH}
+  - {name: reconciliation_legacy_datamart,  severity: HIGH, phase: double_run}
+  - {name: freshness_sla,                   severity: MEDIUM, sla: "07:00 UTC"}

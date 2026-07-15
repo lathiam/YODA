@@ -1,0 +1,30 @@
+# Environnement DEV — développement et tests rapides (données synthétiques).
+# Aucun secret ici : les identifiants viennent de Secret Manager / comptes de service.
+environment: dev
+
+gcp:
+  project_id: yoda-mnv-dev
+  region: europe-west1
+  landing_bucket: yoda-mnv-dev-landing
+  archive_bucket: yoda-mnv-dev-archive
+  composer_dag_bucket: yoda-mnv-dev-composer-dags
+
+datasets:
+  app_impulse: app_impulse
+  enterprise_contract: enterprise_contract
+  product_contract: product_contract
+  usage_bi: usage_bi
+  ops: ops                # métadonnées d'exécution, rejets, résultats qualité
+
+# Chemins utilisés par le mode démo locale (exécution sans GCP)
+local:
+  output_dir: data/output
+  referential_products: data/samples/referential_products.csv
+
+quality:
+  freshness_sla_hours: 24   # chargement terminé avant 07:00 => fraîcheur < 24h
+  max_reject_ratio: 0.30    # seuil élargi en DEV : le jeu synthétique contient
+                            # volontairement des anomalies ; preprod/prod = 5%
+
+alerting:
+  channel: log              # dev: log uniquement ; preprod/prod: monitoring + oncall

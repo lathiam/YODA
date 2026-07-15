@@ -1,0 +1,5 @@
+# Dépendances d'exécution de la Pipeline Factory.
+# La logique cœur (src/yoda) est en Python standard : aucune dépendance obligatoire
+# hors PyYAML pour la configuration. Les clients GCP ne sont nécessaires que sur la
+# plateforme cible (Composer les fournit déjà).
+PyYAML>=6.0

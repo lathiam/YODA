@@ -1,0 +1,20 @@
+[project]
+name = "yoda-pipeline-factory"
+version = "0.1.0"
+description = "Projet YODA - Pipeline Factory et socle Data GCP (BPCE Assurances, comptoir MNV)"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "dags"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]

@@ -1,0 +1,5 @@
+# Dépendances spécifiques à l'exécution sur GCP (hors Composer, qui les fournit).
+-r base.txt
+google-cloud-bigquery>=3.20
+google-cloud-storage>=2.16
+apache-airflow>=2.9 ; python_version >= "3.9"

@@ -1,0 +1,12 @@
+[
+  {"name": "contract_id", "type": "STRING", "mode": "NULLABLE", "description": "Identifiant métier du contrat (brut, contrôlé en staging)"},
+  {"name": "customer_id", "type": "STRING", "mode": "NULLABLE", "description": "Identifiant client Impulse - donnée personnelle"},
+  {"name": "product_code", "type": "STRING", "mode": "NULLABLE", "description": "Code produit source"},
+  {"name": "status", "type": "STRING", "mode": "NULLABLE", "description": "Statut source Impulse"},
+  {"name": "start_date", "type": "STRING", "mode": "NULLABLE", "description": "Date d'effet (chaîne brute, typée en staging)"},
+  {"name": "end_date", "type": "STRING", "mode": "NULLABLE", "description": "Date de fin (chaîne brute)"},
+  {"name": "annual_premium", "type": "STRING", "mode": "NULLABLE", "description": "Prime annualisée (chaîne brute)"},
+  {"name": "channel_code", "type": "STRING", "mode": "NULLABLE", "description": "Canal de souscription"},
+  {"name": "event_timestamp", "type": "STRING", "mode": "NULLABLE", "description": "Horodatage de l'événement de gestion"},
+  {"name": "ingestion_batch_id", "type": "STRING", "mode": "NULLABLE", "description": "Identifiant du lot d'ingestion"}
+]

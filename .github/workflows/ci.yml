@@ -1,0 +1,47 @@
+# CI YODA — exécutée sur chaque Pull Request et sur main (documentation §15.2) :
+# lint, tests automatisés et contrôles avant toute promotion DEV -> PREPROD -> PROD.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: pip install -r requirements/dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check src tests dags
+
+      - name: Tests unitaires et intégration
+        run: pytest tests -v
+
+      - name: Démo pipeline bout en bout (données synthétiques)
+        run: |
+          python -m yoda.pipeline --env dev --business-date 2026-07-13 \
+            --source-file data/samples/impulse_contracts_20260713.csv
+        env:
+          PYTHONPATH: src
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Format et validation Terraform
+        working-directory: infra
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate

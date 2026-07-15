@@ -1,0 +1,54 @@
+# Contrat de données d'entrée — fichier contrats Impulse (documentation §8, étape 5).
+# Formalise le format, la fréquence, le SLA, la sécurité et la gestion des
+# changements entre le producteur (Impulse / BPCE-IT) et le consommateur (YODA).
+
+contract:
+  name: impulse_contracts_file
+  version: "1.0"
+  producer:
+    system: Impulse
+    team: BPCE-IT / mise à disposition fichiers
+  consumer:
+    pipeline: contracts_active_daily
+    domain: contrat
+    data_owner: "Data Owner domaine Contrat (à nommer)"
+
+delivery:
+  channel: "Mise à disposition fichiers BPCE-IT (bucket landing GCS)"
+  path_pattern: "impulse/contracts/{YYYYMMDD}/impulse_contracts_{YYYYMMDD}.csv"
+  frequency: daily
+  arrival_window: "avant 05:00 UTC"
+  sla_publication: "produit Data publié avant 07:00 UTC"
+  late_delivery: "alerte exploitation après 2h d'attente du capteur"
+
+format:
+  type: csv
+  encoding: utf-8
+  delimiter: ";"
+  header: true
+  compression: none
+
+schema:
+  fields:
+    - {name: contract_id,     type: string,  required: true,  description: "Identifiant métier stable du contrat"}
+    - {name: customer_id,     type: string,  required: true,  description: "Identifiant client Impulse — donnée personnelle"}
+    - {name: product_code,    type: string,  required: true,  description: "Code produit source, rattaché au référentiel"}
+    - {name: status,          type: string,  required: true,  description: "Statut source", allowed: [EN_COURS, ACTIF, SUSPENDU, RESILIE, ANNULE]}
+    - {name: start_date,      type: date,    required: true,  description: "Date d'effet, format YYYY-MM-DD"}
+    - {name: end_date,        type: date,    required: false, description: "Date de fin/résiliation, vide si aucune"}
+    - {name: annual_premium,  type: decimal, required: false, description: "Prime annualisée en EUR, >= 0"}
+    - {name: channel_code,    type: string,  required: false, description: "Canal de souscription"}
+    - {name: event_timestamp, type: timestamp, required: false, description: "Horodatage de l'événement de gestion (déduplication)"}
+
+security:
+  classification: personnelle       # contient customer_id (documentation §13.2)
+  measures:
+    - "chiffrement en transit et au repos"
+    - "accès restreint au compte de service d'ingestion"
+    - "pseudonymisation de customer_id dans les produits Data exposés"
+  retention: "à définir avec le DPO — voir docs/architecture.md §RGPD"
+
+change_management:
+  compatibility: "ajout de colonne autorisé ; suppression/renommage = version majeure"
+  notice_period: "30 jours avant tout changement de schéma"
+  contact: "équipe Impulse + Data Steward domaine Contrat"

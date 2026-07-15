@@ -1,0 +1,5 @@
+project_id  = "yoda-mnv-dev"
+environment = "dev"
+region      = "europe-west1"
+# bi_readers_group     = "bi-readers-dev@bpce-assurances.example"
+# data_engineers_group = "data-engineers@bpce-assurances.example"

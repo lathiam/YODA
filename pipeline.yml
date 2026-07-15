@@ -1,0 +1,53 @@
+# Configuration CI/CD YODA (documentation §15) — chaîne de promotion :
+# branche -> Merge Request -> revue par un pair -> lint + tests + sécurité
+# -> déploiement DEV -> promotion PREPROD -> promotion PROD (validation manuelle).
+#
+# Ce fichier décrit la chaîne de déploiement cible de manière déclarative.
+# L'implémentation GitHub Actions correspondante est dans .github/workflows/ci.yml ;
+# à adapter si la plateforme Groupe impose GitLab CI ou Cloud Build.
+
+pipeline:
+  name: yoda-contracts-pipeline
+
+  stages:
+    - name: verify
+      steps:
+        - lint: ruff check src tests dags
+        - unit_tests: pytest tests/unit -v
+        - integration_tests: pytest tests/integration -v
+        - security_scan: "analyse des dépendances et détection de secrets (outil Groupe)"
+        - terraform_validate: terraform -chdir=infra validate
+
+    - name: deploy_dev
+      trigger: merge_on_main
+      environment: dev
+      steps:
+        - terraform_apply: terraform -chdir=infra apply -var-file=environments/dev.tfvars
+        - sync_dags: >-
+            gsutil -m rsync -r dags/ gs://yoda-mnv-dev-composer-dags/dags/
+            && gsutil -m rsync -r sql/ gs://yoda-mnv-dev-composer-dags/dags/sql/
+            && gsutil -m rsync -r schemas/ gs://yoda-mnv-dev-landing/schemas/
+        - smoke_test: "déclencher contracts_active_daily sur données synthétiques"
+
+    - name: deploy_preprod
+      trigger: manual_approval        # recette intégration, sécurité, perf, métier
+      environment: preprod
+      steps:
+        - terraform_apply: terraform -chdir=infra apply -var-file=environments/preprod.tfvars
+        - sync_dags: "idem dev, buckets preprod"
+        - reconciliation: "double run + comparaison avec le datamart legacy (§18.3)"
+
+    - name: deploy_prod
+      trigger: manual_approval        # Go/No Go (§18.4) : écarts acceptés, tests verts,
+      environment: prod               # SLA, habilitations, runbook, rollback
+      steps:
+        - terraform_apply: terraform -chdir=infra apply -var-file=environments/prod.tfvars
+        - sync_dags: "idem dev, buckets prod"
+        - hypercare: "surveillance renforcée pendant la période de stabilisation"
+
+  rollback:
+    strategy: >-
+      Redéployer le tag Git précédent (DAGs + SQL) ; les couches étant
+      partitionnées par date métier, rejouer la partition suffit à restaurer
+      les données. L'infrastructure est restaurée par terraform apply sur la
+      révision précédente.
