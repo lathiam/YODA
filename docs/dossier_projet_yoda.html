@@ -1,0 +1,353 @@
+<meta charset="utf-8">
+<title>Dossier de projet YODA — De A à Z</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a2e; font-size: 10.5pt; line-height: 1.55; max-width: 100%; }
+  h1 { font-size: 22pt; color: #0d1b4c; border-bottom: 3px solid #0d1b4c; padding-bottom: 6px; }
+  h2 { font-size: 15pt; color: #0d1b4c; margin-top: 26px; border-bottom: 1px solid #b9c2e0; padding-bottom: 3px; page-break-after: avoid; }
+  h3 { font-size: 12pt; color: #23347a; margin-top: 18px; page-break-after: avoid; }
+  .subtitle { color: #555; font-size: 12pt; margin-top: -6px; }
+  .meta { background: #eef1fa; border-left: 4px solid #0d1b4c; padding: 8px 14px; margin: 14px 0; font-size: 9.5pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th { background: #0d1b4c; color: white; text-align: left; padding: 5px 8px; }
+  td { border: 1px solid #c5cbe3; padding: 4px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f4f6fc; }
+  code { font-family: 'Courier New', monospace; background: #eef1fa; padding: 1px 4px; font-size: 8.7pt; border-radius: 3px; }
+  pre { background: #10162e; color: #d8e0f5; padding: 10px 12px; font-size: 8.3pt; border-radius: 6px; overflow-x: hidden; white-space: pre-wrap; page-break-inside: avoid; line-height: 1.4; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .box { border: 1px solid #b9c2e0; border-radius: 6px; padding: 10px 14px; margin: 12px 0; background: #fafbff; page-break-inside: avoid; }
+  .box.warn { border-color: #d99a00; background: #fff9ec; }
+  .box.ok { border-color: #2e7d32; background: #f0f8f1; }
+  .box b:first-child { color: #0d1b4c; }
+  ul, ol { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .pagebreak { page-break-before: always; }
+  .toc li { margin: 2px 0; }
+  .footer-note { color: #777; font-size: 8.5pt; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 8px; }
+</style>
+
+<h1>Projet YODA — Dossier de réalisation complet</h1>
+<p class="subtitle">De la documentation d'architecture à la plateforme Data opérationnelle sur GCP — toutes les étapes, de A à Z</p>
+
+<div class="meta">
+  <b>Programme :</b> YODA (« Your Own Data Architecture ») — refonte de l'architecture Data de BPCE Assurances vers la plateforme Groupe GCP (comptoir MNV, CDPG)<br>
+  <b>Dépôt :</b> github.com/lathiam/YODA — branche <code>claude/technical-setup-hzjojy</code><br>
+  <b>Projet GCP de mise en œuvre :</b> <code>yoda-data-2026</code> (environnement dev, région europe-west1)<br>
+  <b>Date :</b> 15 juillet 2026 — <b>Version :</b> 1.0
+</div>
+
+<h2>Sommaire</h2>
+<ol class="toc">
+  <li>Ce qui était demandé : le cahier des charges YODA</li>
+  <li>Vue d'ensemble de ce qui a été réalisé</li>
+  <li>Étape 1 — Le socle logiciel : la Pipeline Factory</li>
+  <li>Étape 2 — L'infrastructure as code (Terraform)</li>
+  <li>Étape 3 — Le déploiement réel sur GCP (et ses obstacles)</li>
+  <li>Étape 4 — L'ingestion : 7 sources et leurs données simulées</li>
+  <li>Étape 5 — Les transformations : de la donnée brute au produit Data</li>
+  <li>Étape 6 — Qualité, rejets et observabilité</li>
+  <li>Étape 7 — L'orchestration : requête programmée et Composer</li>
+  <li>Sécurité, RGPD et FinOps</li>
+  <li>Industrialisation : Git, tests et CI/CD</li>
+  <li>Ce qu'il reste à faire (la suite du projet)</li>
+  <li>Annexes : structure du dépôt, commandes essentielles</li>
+</ol>
+
+<div class="pagebreak"></div>
+
+<h2>1. Ce qui était demandé : le cahier des charges YODA</h2>
+<p>La documentation source du programme (support « Projet YODA — refonte de l'architecture vers GCP ») décrit une transformation en profondeur : quitter une plateforme historique en silos (SQL Server sur MyCloud, datamarts dupliqués, outils fortement couplés comme MicroStrategy, Altair, Talend) pour reconstruire, cas d'usage par cas d'usage, une plateforme GCP organisée en <b>couches</b> et en <b>domaines métier</b>, où les données deviennent des <b>produits partagés, gouvernés, testés et documentés</b>.</p>
+
+<h3>1.1 L'architecture cible en 7 couches</h3>
+<table>
+  <tr><th>Couche</th><th>Rôle</th><th>Exemple</th></tr>
+  <tr><td>1. Sources</td><td>Applications qui produisent la donnée</td><td>Impulse, TecCare, Genesys, Adobe, partenaires, Open Data</td></tr>
+  <tr><td>2. Ingestion</td><td>Porte d'entrée standardisée avec contrôles</td><td>Ingestions LUCI (BPCE-SI), fichiers (BPCE-IT)</td></tr>
+  <tr><td>3. Modèle applicatif</td><td>Données conservées par source, proches de l'origine</td><td><code>app_impulse.raw_contracts</code></td></tr>
+  <tr><td>4. Pipeline Factory &amp; Composer</td><td>Composants réutilisables + orchestration</td><td>templates, contrôles, reprises, logs</td></tr>
+  <tr><td>5. Modèle d'entreprise</td><td>Objets métier stables par domaine</td><td><code>enterprise_contract.contracts</code></td></tr>
+  <tr><td>6. Exposition / produits Data</td><td>Tables et vues gouvernées avec SLA</td><td><code>product_contract.active_contracts_daily</code></td></tr>
+  <tr><td>7. Modèles d'usage</td><td>Adaptés au consommateur</td><td>vues BI, features Data Science, API</td></tr>
+</table>
+
+<h3>1.2 Les exigences transverses du support</h3>
+<ul>
+  <li><b>Pipelines robustes</b> : idempotents, observables, rejouables, découplés, testables, paramétrables, sécurisés, documentés (§11.1)</li>
+  <li><b>Qualité</b> : dimensions (complétude, unicité, validité, cohérence, fraîcheur…) et sévérités pilotant la publication (§12)</li>
+  <li><b>Rejets</b> : jamais une ligne perdue — donnée d'origine + motif + statut de reprise (§11.3)</li>
+  <li><b>Conformité by design</b> : classification, moindre privilège, pseudonymisation, durées de conservation (§13)</li>
+  <li><b>Industrialisation</b> : Git, revues, CI/CD, environnements DEV/PREPROD/PROD, jamais de secret dans le code (§15)</li>
+  <li><b>FinOps</b> : coûts suivis dès la conception, attribués par domaine et produit (§17)</li>
+  <li><b>Migration par lots</b> : double run, réconciliation avec le legacy, Go/No Go, décommissionnement (§18)</li>
+</ul>
+
+<h2>2. Vue d'ensemble de ce qui a été réalisé</h2>
+<div class="box ok">
+<b>Résultat final :</b> une implémentation fonctionnelle de bout en bout de l'architecture cible, déployée et alimentée sur le projet GCP <code>yoda-data-2026</code> : 18 datasets BigQuery couvrant toutes les couches, 7 sources ingérées avec données simulées cohérentes, 3 chaînes de transformation complètes (Contrats, Sinistres, Interactions), tests qualité bloquants, rejets motivés, journal d'exécution, orchestration quotidienne automatique gratuite, infrastructure entièrement en code, CI/CD et documentation d'exploitation. Coût de fonctionnement : quasi nul (&lt; 0,01 €/mois).
+</div>
+
+<table>
+  <tr><th>Brique</th><th>Implémentation</th><th>Emplacement dans le dépôt</th></tr>
+  <tr><td>Pipeline Factory</td><td>Package Python testable (36 tests)</td><td><code>src/yoda/</code></td></tr>
+  <tr><td>Infrastructure</td><td>Terraform (datasets, buckets, IAM, planification)</td><td><code>infra/</code></td></tr>
+  <tr><td>Ingestion</td><td>Contrôles + 7 sources simulées + landing GCS</td><td><code>src/yoda/ingestion.py</code>, <code>data/samples/</code></td></tr>
+  <tr><td>Transformations</td><td>SQL BigQuery par couche + Python</td><td><code>sql/</code>, <code>src/yoda/transformations/</code></td></tr>
+  <tr><td>Qualité / rejets / observabilité</td><td>Framework à sévérités + tables <code>ops.*</code></td><td><code>src/yoda/quality.py</code>, <code>rejects.py</code>, <code>metadata.py</code></td></tr>
+  <tr><td>Orchestration</td><td>Requête programmée (active) + DAG Composer (cible)</td><td><code>sql/orchestration/</code>, <code>dags/</code></td></tr>
+  <tr><td>CI/CD</td><td>GitHub Actions + Cloud Build + chaîne de promotion</td><td><code>.github/workflows/</code>, <code>cloudbuild.yaml</code>, <code>pipeline.yml</code></td></tr>
+  <tr><td>Gouvernance</td><td>Contrats de données, catalogue, runbook, conventions</td><td><code>schemas/</code>, <code>docs/</code></td></tr>
+</table>
+
+<div class="pagebreak"></div>
+
+<h2>3. Étape 1 — Le socle logiciel : la Pipeline Factory</h2>
+<p>Le support YODA parle d'une « Pipeline Factory » : un ensemble de composants standardisés et réutilisables pour construire tous les pipelines. Nous l'avons implémentée comme un package Python (<code>src/yoda/</code>), volontairement <b>sans dépendance au moteur d'exécution</b> : la même logique sert au développement local (fichiers CSV), aux tests automatisés, et sert de spécification exécutable pour le SQL BigQuery.</p>
+
+<table>
+  <tr><th>Module</th><th>Responsabilité (référence au support)</th></tr>
+  <tr><td><code>ingestion.py</code></td><td>Contrôles de la porte d'entrée (§6.3) : présence, fichier non vide, extension, encodage, colonnes obligatoires, checksum SHA-256, <b>détection de double chargement</b> via un registre des lots (idempotence). Codes d'erreur normalisés <code>ING_001</code> à <code>ING_006</code>.</td></tr>
+  <tr><td><code>transformations/contracts.py</code></td><td>Règles métier du domaine Contrat (§9.4) : harmonisation des statuts, typage, déduplication (dernier événement par contrat), rattachement au référentiel produit, et la règle <code>is_active</code> formalisée et testée sur ses cas limites.</td></tr>
+  <tr><td><code>quality.py</code></td><td>Framework de tests qualité (§12) : chaque contrôle porte une dimension et une <b>sévérité</b>. CRITIQUE/ÉLEVÉE bloquent la publication ; MOYENNE publie avec alerte ; FAIBLE alimente le suivi.</td></tr>
+  <tr><td><code>rejects.py</code></td><td>Gestion des rejets (§11.3) : donnée d'origine + motif + règle en échec + statut de reprise. Aucune ligne écartée silencieusement.</td></tr>
+  <tr><td><code>metadata.py</code></td><td>Métadonnées d'exécution (§11.2) : <code>run_id</code>, <code>batch_id</code> déterministe, volumes entrée/sortie/rejets, statut, erreurs. Le <code>batch_id</code> déterministe (source + date + fichier) est la clé de l'idempotence.</td></tr>
+  <tr><td><code>pipeline.py</code></td><td>Exécution locale de bout en bout (mode démo) : la chaîne complète tourne sans GCP via <code>make demo</code>.</td></tr>
+</table>
+
+<div class="box">
+<b>Point d'apprentissage — l'ordre des étapes :</b> le pipeline n'écrit le produit Data <i>qu'après</i> le passage des contrôles bloquants. Si la qualité n'est pas garantie, la publication n'a jamais lieu et les consommateurs restent sur la dernière version saine : mieux vaut des données d'hier que des données fausses.
+</div>
+
+<h2>4. Étape 2 — L'infrastructure as code (Terraform)</h2>
+<p>Toute l'infrastructure est décrite dans <code>infra/</code> : rien n'a été créé « à la main » dans la console. C'est le principe <b>Infrastructure as Code</b> : reproductible (dev → preprod → prod avec un simple fichier de variables), relisible en revue de code, et auditable.</p>
+
+<h3>4.1 Les ressources provisionnées</h3>
+<ul>
+  <li><b>18 datasets BigQuery</b> respectant la convention de nommage du support (§10.3) : <code>app_&lt;source&gt;</code> ×7, <code>enterprise_&lt;domaine&gt;</code> ×6, <code>product_&lt;domaine&gt;</code> ×2, <code>usage_&lt;type&gt;</code> ×3, plus <code>ops</code>.</li>
+  <li><b>Tables d'exploitation</b> : <code>ops.rejects</code> et <code>ops.pipeline_runs</code>, partitionnées par jour ; table produit <code>active_contracts_daily</code> partitionnée par <code>snapshot_date</code> et clusterisée (<code>product_code</code>, <code>channel_code</code>) pour réduire les octets analysés (FinOps §17.2).</li>
+  <li><b>Buckets GCS</b> : <code>-landing</code> (arrivée des fichiers, purge à 30 jours — un fichier non traité est un incident, pas une archive), <code>-archive</code> (passage en Coldline à 90 jours, suppression à 10 ans à confirmer avec le DPO), <code>-tfstate</code> (état Terraform).</li>
+  <li><b>IAM moindre privilège</b> : compte de service <code>yoda-pipeline-dev</code> limité à ses buckets et datasets ; groupes BI limités à <code>usage_bi</code> ; labels FinOps (<code>program</code>, <code>comptoir</code>, <code>layer</code>, <code>domain</code>, <code>environment</code>) sur chaque ressource pour l'attribution des coûts.</li>
+  <li><b>Requête programmée</b> d'orchestration quotidienne (voir étape 7).</li>
+</ul>
+
+<pre><code># Un dataset par couche et par domaine — extrait de infra/datasets.tf
+locals {
+  datasets = {
+    app_impulse        = { layer = "applicatif", domain = "contrat", ... }
+    enterprise_claim   = { layer = "entreprise", domain = "sinistre", ... }
+    product_contract   = { layer = "produit",    domain = "contrat", ... }
+    usage_datascience  = { layer = "usage",      domain = "transverse", ... }
+    ops                = { layer = "transverse", domain = "transverse", ... }
+  }
+}</code></pre>
+
+<div class="pagebreak"></div>
+
+<h2>5. Étape 3 — Le déploiement réel sur GCP (et ses obstacles)</h2>
+<p>Cette étape est riche d'enseignements : voici les problèmes réels rencontrés, dans l'ordre, et comment ils ont été résolus. C'est le quotidien d'un Data Engineer.</p>
+
+<table>
+  <tr><th>#</th><th>Obstacle rencontré</th><th>Cause</th><th>Résolution</th></tr>
+  <tr><td>1</td><td><code>gsutil : Permission denied</code> sur PC Windows</td><td>gsutil défaillant sous Git Bash (fichiers dans Program Files)</td><td>Exécuter dans <b>Cloud Shell</b> ; remplacer gsutil par <code>gcloud storage</code> (plus portable)</td></tr>
+  <tr><td>2</td><td><code>billing account… disabled in state absent</code></td><td>Le projet n'était lié à aucun compte de facturation</td><td>Lier le compte : <code>gcloud billing projects link</code></td></tr>
+  <tr><td>3</td><td><code>Cloud billing quota exceeded</code></td><td>Quota de projets liés au compte de facturation atteint (5)</td><td>Détacher un projet inutilisé (<code>gcloud billing projects unlink</code>)</td></tr>
+  <tr><td>4</td><td>Terraform absent de Cloud Shell</td><td>Google ne préinstalle plus Terraform (un « shim » affiche des instructions)</td><td>Le script d'installation télécharge Terraform 1.9.8 dans <code>~/bin</code> automatiquement</td></tr>
+  <tr><td>5</td><td><code>connection refused</code> vers l'API BigQuery, aléatoire</td><td>Instabilité réseau ponctuelle de Cloud Shell</td><td>Boucle de <b>retry</b> (3 tentatives, 15 s) autour de <code>terraform apply</code> — sans risque car Terraform est idempotent</td></tr>
+</table>
+
+<div class="box warn">
+<b>Leçon à retenir :</b> en environnement cloud, les échecs transitoires sont normaux. Un bon déploiement n'est pas un déploiement qui ne rate jamais : c'est un déploiement <b>idempotent et retentable</b>, qui reprend là où il s'est arrêté sans jamais dupliquer.
+</div>
+
+<h3>5.1 Les deux scripts de déploiement</h3>
+<ul>
+  <li><code>scripts/deploy_gcp.sh</code> — l'infrastructure : vérification/installation de Terraform, activation des APIs, bucket d'état, <code>terraform apply</code> avec retries, contrôles post-déploiement.</li>
+  <li><code>scripts/seed_bigquery.sh</code> — les données : chargement des référentiels et des 7 sources brutes, exécution des 3 chaînes de transformation, dépôt des fichiers dans le landing, tableau final des volumes par couche.</li>
+</ul>
+
+<h2>6. Étape 4 — L'ingestion : 7 sources et leurs données simulées</h2>
+<p>Le support cite les sources du périmètre ; chacune a reçu un jeu de données simulé <b>cohérent avec les autres</b> (les sinistres référencent les contrats, les interactions les clients) et contenant des <b>anomalies volontaires</b> pour exercer les rejets. Le catalogue complet est dans <code>schemas/sources_catalog.yaml</code>.</p>
+
+<table>
+  <tr><th>Source</th><th>Dataset</th><th>Contenu simulé</th><th>Anomalies volontaires</th></tr>
+  <tr><td>Impulse (contrats)</td><td><code>app_impulse</code></td><td>12 contrats, statuts variés, réémission</td><td>client manquant, dates inversées, produit inconnu, doublon</td></tr>
+  <tr><td>TecCare (sinistres)</td><td><code>app_teccare</code></td><td>12 sinistres rattachés aux contrats</td><td>sinistre orphelin, claim_id vide, clôture antérieure à l'ouverture, réémission</td></tr>
+  <tr><td>Genesys (interactions)</td><td><code>app_genesys</code></td><td>12 contacts téléphone/chat/email</td><td>—</td></tr>
+  <tr><td>Adobe Analytics (web)</td><td><code>app_adobe_analytics</code></td><td>12 événements de navigation, parcours devis</td><td>visiteurs non identifiés (filtrés)</td></tr>
+  <tr><td>BPCE IARD (Groupe)</td><td><code>app_bpce_iard</code></td><td>6 contrats du réseau bancaire</td><td>—</td></tr>
+  <tr><td>Partenaires</td><td><code>app_partners</code></td><td>6 polices courtiers/délégataires</td><td>—</td></tr>
+  <tr><td>Open Data</td><td><code>app_opendata</code></td><td>10 communes INSEE</td><td>—</td></tr>
+</table>
+
+<p>Le <b>contrat de données</b> type est formalisé dans <code>schemas/data_contract_impulse_contracts.yaml</code> : producteur, canal, fenêtre d'arrivée, format, schéma, classification RGPD, règles d'évolution (préavis de 30 jours). C'est le document qui engage le producteur et protège le consommateur (§8, étape 5 du cycle de vie).</p>
+
+<div class="pagebreak"></div>
+
+<h2>7. Étape 5 — Les transformations : de la donnée brute au produit Data</h2>
+<p>Trois chaînes complètes matérialisent le chemin décrit au §9 du support. Exemple du domaine Contrat :</p>
+
+<pre><code>app_impulse.raw_contracts            (brut, tel que reçu + batch_id)
+   │  nettoyage technique : typage, statuts harmonisés, lignes invalides → ops.rejects
+   ▼
+app_impulse.stg_contracts_clean      (staging)
+   │  jointure référentiel produits + déduplication (dernier événement par contrat)
+   ▼
+enterprise_contract.contracts        (objet métier stable, découplé d'Impulse)
+   │  règle d'activité + pseudonymisation SHA-256 du client + photographie du jour
+   ▼
+product_contract.active_contracts_daily   (partition par snapshot_date)
+   │
+   ├─→ usage_bi.vw_active_contracts             (KPI agrégés pour Power BI)
+   ├─→ usage_datascience.vw_contract_features   (ancienneté, features ML)
+   └─→ usage_app.vw_contract_status             (statut à date pour API)</code></pre>
+
+<p>La chaîne <b>Sinistres</b> démontre en plus le <b>croisement de domaines</b> : chaque sinistre est validé contre le domaine Contrat (un sinistre sur contrat inconnu part en rejet <code>ENT_002_UNKNOWN_CONTRACT</code>) et enrichi du produit et du canal de son contrat. La chaîne <b>Interactions</b> démontre l'<b>unification multi-sources</b> : un appel Genesys et un parcours web Adobe deviennent le même objet métier « interaction », comparable et agrégeable.</p>
+
+<h3>7.1 Résultats vérifiés en production (projet yoda-data-2026)</h3>
+<table>
+  <tr><th>Couche</th><th>Objet</th><th>Lignes</th><th>Lecture</th></tr>
+  <tr><td>Applicatif</td><td>7 tables raw</td><td>70</td><td>tout ce qui est reçu est conservé</td></tr>
+  <tr><td>Entreprise</td><td>contracts / claims / interactions</td><td>8 / 8 / 19</td><td>après nettoyage, déduplication, rattachements</td></tr>
+  <tr><td>Produit</td><td>active_contracts_daily / claims_daily</td><td>8 / 8 par jour</td><td>dont 4 contrats actifs au 13/07/2026</td></tr>
+  <tr><td>Ops</td><td>rejects</td><td>6</td><td>chaque rejet avec son motif exploitable</td></tr>
+  <tr><td>Ops</td><td>pipeline_runs</td><td>3+</td><td>une ligne par exécution, volumes tracés</td></tr>
+</table>
+
+<h2>8. Étape 6 — Qualité, rejets et observabilité</h2>
+<h3>8.1 Les tests qualité du produit « Contrats actifs » (§9.6)</h3>
+<table>
+  <tr><th>Contrôle</th><th>Dimension</th><th>Sévérité</th><th>Comportement en échec</th></tr>
+  <tr><td><code>contract_id</code> non nul</td><td>complétude</td><td>CRITIQUE</td><td>publication bloquée, alerte immédiate</td></tr>
+  <tr><td>unicité (contract_id, snapshot_date)</td><td>unicité</td><td>CRITIQUE</td><td>publication bloquée</td></tr>
+  <tr><td>start_date ≤ end_date</td><td>cohérence</td><td>ÉLEVÉE</td><td>publication bloquée, analyse obligatoire</td></tr>
+  <tr><td>prime ≥ 0</td><td>validité</td><td>ÉLEVÉE</td><td>publication bloquée</td></tr>
+  <tr><td>produit au référentiel</td><td>validité</td><td>ÉLEVÉE</td><td>publication bloquée</td></tr>
+  <tr><td>fraîcheur &lt; SLA</td><td>fraîcheur</td><td>MOYENNE</td><td>publication avec alerte</td></tr>
+  <tr><td>réconciliation avec le legacy</td><td>exactitude</td><td>ÉLEVÉE</td><td>phase double run : No Go si écart inexpliqué</td></tr>
+</table>
+
+<h3>8.2 Le circuit d'un rejet</h3>
+<p>Une ligne invalide n'est <b>jamais supprimée</b> : elle est stockée dans <code>ops.rejects</code> avec la donnée originale (JSON), le code de règle (ex. <code>STG_004_DATE_ORDER</code>), le message, le lot et un statut de reprise. Le runbook (<code>docs/runbook_contrats_actifs.md</code>) associe chaque code à son diagnostic et à sa correction. Le seuil de rejet est surveillé : au-delà de 5&nbsp;% (30&nbsp;% en dev sur le jeu synthétique), la publication est bloquée.</p>
+
+<h3>8.3 Le journal d'exécution</h3>
+<p>Chaque run écrit dans <code>ops.pipeline_runs</code> : <code>run_id</code>, <code>batch_id</code>, date métier, volumes entrée/sortie/rejets, horodatages, statut (SUCCESS / PARTIAL / FAILED), code d'erreur. C'est la base de la supervision (§16) : une chute de volume ou une dérive du taux de rejet se voit en une requête.</p>
+
+<div class="pagebreak"></div>
+
+<h2>9. Étape 7 — L'orchestration : requête programmée et Composer</h2>
+<h3>9.1 Ce qui tourne aujourd'hui : la requête programmée BigQuery (0 €)</h3>
+<p>La requête programmée <code>yoda-daily-full-chain-dev</code> (provisionnée par <code>infra/scheduler.tf</code>) exécute chaque jour à <b>05h00 UTC</b> le script <code>sql/orchestration/daily_full_chain.sql</code> : les trois chaînes dans l'ordre des dépendances, une nouvelle photographie quotidienne des produits, et une ligne de journal. Elle tourne avec le <b>compte de service pipeline</b> (et non un compte personnel), grâce à une délégation IAM (<code>serviceAccountTokenCreator</code> accordé à l'agent du Data Transfer Service).</p>
+
+<h3>9.2 La cible industrielle : le DAG Composer/Airflow</h3>
+<p>Le DAG <code>dags/contracts_active_daily.py</code> est prêt pour Composer et apporte ce que la requête programmée ne sait pas faire :</p>
+<ul>
+  <li><b>Capteur de fichier</b> : attend l'arrivée du fichier Impulse dans le landing (vérification toutes les 5 min, timeout 2 h puis alerte) ;</li>
+  <li><b>Contrôles d'ingestion</b> avant chargement ; chargement raw en <code>WRITE_TRUNCATE</code> sur la partition du jour ;</li>
+  <li><b>Tests qualité bloquants</b> en parallèle (<code>BigQueryCheckOperator</code>) entre le produit et la publication ;</li>
+  <li><b>Reprise fine</b> : relancer une seule tâche, ou rejouer une date passée (backfill) grâce au templating <code>{{ ds }}</code> ;</li>
+  <li><b>Archivage</b> du fichier source après traitement.</li>
+</ul>
+<div class="box warn">
+<b>Décision coût :</b> Cloud Composer facture ~300-400 €/mois même à l'arrêt. Il a été volontairement exclu du déploiement : la requête programmée couvre le besoin quotidien du bac à sable, le DAG restant prêt pour l'environnement d'entreprise (où Composer est fourni par la plateforme Groupe).
+</div>
+
+<h3>9.3 Requête programmée vs Composer — le comparatif</h3>
+<table>
+  <tr><th>Critère</th><th>Requête programmée</th><th>Composer / Airflow</th></tr>
+  <tr><td>Chaîner du SQL à heure fixe</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Attendre / contrôler des fichiers</td><td>✘</td><td>✔ (capteurs, Python)</td></tr>
+  <tr><td>Reprise par tâche, backfill par date</td><td>✘</td><td>✔ (natif)</td></tr>
+  <tr><td>Dépendances entre pipelines, alerting fin</td><td>limité</td><td>✔</td></tr>
+  <tr><td>Coût</td><td>0 €</td><td>~350 €/mois</td></tr>
+</table>
+
+<h2>10. Sécurité, RGPD et FinOps</h2>
+<ul>
+  <li><b>Moindre privilège</b> : le compte de service pipeline n'a que les droits nécessaires ; les consommateurs BI ne voient que <code>usage_bi</code>, jamais les couches internes (protection des structures, §6.7).</li>
+  <li><b>Pseudonymisation</b> : <code>customer_id</code> est haché (SHA-256 salé) dès la couche produit — les usages BI et Data Science n'ont pas besoin de l'identité (minimisation RGPD §13.3).</li>
+  <li><b>Aucun secret dans le code</b> : configuration non sensible dans <code>config/&lt;env&gt;.yaml</code> ; secrets via Secret Manager et comptes de service.</li>
+  <li><b>Classification</b> : chaque source est classée dans son contrat de données (personnelle, publique…).</li>
+  <li><b>Cycle de conservation</b> : landing purgé à 30 jours, archive en Coldline à 90 jours, suppression à échéance (durées exactes à valider avec le DPO).</li>
+  <li><b>FinOps</b> : partitionnement + clustering (moins d'octets analysés), labels d'attribution des coûts par domaine/couche/environnement, vues d'agrégats pour les usages fréquents, et recommandation d'une alerte de budget (5 €) sur le projet.</li>
+</ul>
+
+<h2>11. Industrialisation : Git, tests et CI/CD</h2>
+<ul>
+  <li><b>Dépôt structuré</b> selon le §15.3 du support : <code>dags/ src/ tests/ config/ schemas/ docs/ infra/ requirements/ pipeline.yml</code>.</li>
+  <li><b>36 tests automatisés</b> (unitaires + intégration) : contrôles d'ingestion, règles métier avec cas limites, framework qualité, chaîne complète de bout en bout, <b>idempotence des relances</b>, échec propre sur fichier manquant.</li>
+  <li><b>CI GitHub Actions</b> (<code>.github/workflows/ci.yml</code>) : lint (ruff) + tests (pytest) + exécution de la démo + validation Terraform à chaque Pull Request.</li>
+  <li><b>Cloud Build</b> (<code>cloudbuild.yaml</code>) : chaîne de déploiement continu depuis GitHub (tests → Terraform → données de référence → sync DAGs optionnelle).</li>
+  <li><b>Chaîne de promotion</b> décrite dans <code>pipeline.yml</code> : DEV automatique, PREPROD et PROD sur validation manuelle (recette, double run, Go/No Go §18.4), avec stratégie de rollback.</li>
+</ul>
+
+<div class="pagebreak"></div>
+
+<h2>12. Ce qu'il reste à faire (la suite du projet)</h2>
+<p>Ce socle correspond aux fondations 2025 et à une partie de 2026 de la roadmap du support. La suite, par ordre de priorité recommandé :</p>
+<table>
+  <tr><th>Chantier</th><th>Contenu</th><th>Référence support</th></tr>
+  <tr><td>Exposition BI réelle</td><td>Brancher Power BI / Looker Studio sur <code>usage_bi</code> ; construire le tableau de bord « Portefeuille contrats »</td><td>§6.8, §9</td></tr>
+  <tr><td>Domaines restants</td><td>Union BPCE IARD dans <code>enterprise_contract</code> ; transformation des flux partenaires ; domaine Finance (cotisations, rapprochements)</td><td>§6.6</td></tr>
+  <tr><td>Double run &amp; réconciliation</td><td>Comparaison systématique avec les datamarts legacy (comptages par segment, sommes, échantillons, cas limites), critères de Go/No Go</td><td>§18</td></tr>
+  <tr><td>Catalogue &amp; lineage outillés</td><td>Alimenter l'outil de catalogue Groupe (Dataplex/Data Catalog) depuis les fiches <code>docs/catalogue/</code></td><td>§14</td></tr>
+  <tr><td>Supervision outillée</td><td>Alertes Cloud Monitoring sur échecs et dérives de volumes ; tableau de bord qualité</td><td>§16</td></tr>
+  <tr><td>Composer en entreprise</td><td>Déployer le DAG sur le Composer de la plateforme Groupe ; intégrer la Pipeline Factory Groupe et l'ingestion LUCI réelle</td><td>§6.5</td></tr>
+  <tr><td>Environnements PREPROD/PROD</td><td>Projets GCP dédiés, données protégées, revue des habilitations</td><td>§15.1</td></tr>
+  <tr><td>Points à clarifier avec l'équipe</td><td>Services GCP officiels, rôle exact de LUCI, normes de la Pipeline Factory Groupe, contenu des lots 01-10, calendrier de décommissionnement</td><td>§25</td></tr>
+</table>
+
+<h2>13. Annexes</h2>
+<h3>13.1 Structure du dépôt</h3>
+<pre><code>YODA/
+├── dags/                  # DAG Composer/Airflow (contracts_active_daily.py)
+├── src/yoda/              # Pipeline Factory : ingestion, transformations, qualité,
+│                          #   rejets, métadonnées, pipeline local
+├── sql/
+│   ├── app_impulse/       # staging + rejets (version orchestrée MERGE)
+│   ├── enterprise_contract/  product_contract/  usage_bi/
+│   ├── bootstrap/         # chaînes complètes d'initialisation (contrats, sinistres, interactions)
+│   └── orchestration/     # daily_full_chain.sql (requête programmée quotidienne)
+├── infra/                 # Terraform : datasets, tables, buckets, IAM, scheduler
+│   └── environments/      # dev.tfvars / preprod.tfvars / prod.tfvars
+├── data/samples/          # 7 sources simulées + 2 référentiels
+├── schemas/               # contrats de données + catalogue des sources
+├── tests/                 # 36 tests unitaires et d'intégration
+├── scripts/               # deploy_gcp.sh (infra) + seed_bigquery.sh (données)
+├── config/                # paramètres par environnement (aucun secret)
+├── docs/                  # architecture, conventions, runbook, catalogue,
+│                          #   déploiement GCP, formation orchestration
+├── .github/workflows/     # CI (lint + tests + démo + terraform validate)
+├── cloudbuild.yaml        # déploiement continu Cloud Build
+├── pipeline.yml           # chaîne de promotion DEV → PREPROD → PROD
+└── Makefile               # install / lint / test / demo</code></pre>
+
+<h3>13.2 Commandes essentielles</h3>
+<pre><code># Démo locale complète (sans GCP)
+make install && make test && make demo
+
+# Déploiement de l'infrastructure sur GCP (Cloud Shell)
+bash scripts/deploy_gcp.sh dev
+
+# Chargement des données simulées et exécution des chaînes
+bash scripts/seed_bigquery.sh dev
+
+# Vérifier les photographies quotidiennes du portefeuille
+SELECT snapshot_date, COUNT(*) contrats, COUNTIF(is_active) actifs
+FROM `yoda-data-2026.product_contract.active_contracts_daily`
+GROUP BY snapshot_date ORDER BY snapshot_date;
+
+# Consulter les rejets et le journal des exécutions
+SELECT rule_code, error_message FROM `yoda-data-2026.ops.rejects`;
+SELECT pipeline_name, business_date, input_rows, output_rows, status
+FROM `yoda-data-2026.ops.pipeline_runs` ORDER BY start_time DESC;</code></pre>
+
+<h3>13.3 Documents complémentaires du dépôt</h3>
+<ul>
+  <li><code>docs/architecture.md</code> — décisions techniques détaillées (D1 à D5) et correspondance couche par couche avec le support</li>
+  <li><code>docs/runbook_contrats_actifs.md</code> — exploitation : symptômes, diagnostics, reprises, escalade</li>
+  <li><code>docs/conventions.md</code> — nommage des datasets/tables/vues, codes de règles, workflow Git</li>
+  <li><code>docs/deploiement_gcp.md</code> — les deux voies de déploiement et l'orchestration gratuite</li>
+  <li><code>docs/formation/orchestration_de_a_a_z.md</code> — formation complète orchestration pour profil junior (concepts, exercices, plan sur 2 semaines, questions d'entretien)</li>
+  <li><code>docs/catalogue/product_contract.active_contracts_daily.md</code> — fiche catalogue type d'un produit Data</li>
+</ul>
+
+<p class="footer-note">Dossier de réalisation du projet YODA — document de travail pédagogique établi à partir de la documentation d'architecture fournie et de l'implémentation du dépôt github.com/lathiam/YODA. Les choix BigQuery/Composer restent des hypothèses de travail à confirmer avec l'équipe plateforme (support §25).</p>
