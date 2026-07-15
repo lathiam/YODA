@@ -1,0 +1,13 @@
+event_id;visitor_id;customer_id;page;event_type;event_timestamp;device;campaign
+EVT-70001;VIS-a8f2;CLI-1005;/devis/habitation;PAGE_VIEW;2026-07-12T08:12:03;MOBILE;ete2026_hab
+EVT-70002;VIS-a8f2;CLI-1005;/devis/habitation/formulaire;FORM_START;2026-07-12T08:13:11;MOBILE;ete2026_hab
+EVT-70003;VIS-a8f2;CLI-1005;/devis/habitation/confirmation;FORM_SUBMIT;2026-07-12T08:19:44;MOBILE;ete2026_hab
+EVT-70004;VIS-c31d;;/accueil;PAGE_VIEW;2026-07-12T09:05:29;DESKTOP;
+EVT-70005;VIS-c31d;;/produits/auto;PAGE_VIEW;2026-07-12T09:06:52;DESKTOP;
+EVT-70006;VIS-9e07;CLI-1001;/espace-client/sinistres;PAGE_VIEW;2026-07-12T10:31:18;MOBILE;
+EVT-70007;VIS-9e07;CLI-1001;/espace-client/sinistres/declaration;FORM_START;2026-07-12T10:32:40;MOBILE;
+EVT-70008;VIS-5b44;CLI-1011;/espace-client/attestations;PAGE_VIEW;2026-07-12T11:15:07;TABLET;
+EVT-70009;VIS-5b44;CLI-1011;/espace-client/attestations/telechargement;DOWNLOAD;2026-07-12T11:15:58;TABLET;
+EVT-70010;VIS-c31d;;/devis/auto;PAGE_VIEW;2026-07-12T14:40:22;DESKTOP;retargeting_q3
+EVT-70011;VIS-c31d;;/devis/auto/formulaire;FORM_START;2026-07-12T14:41:35;DESKTOP;retargeting_q3
+EVT-70012;VIS-c31d;;/devis/auto/abandon;FORM_ABANDON;2026-07-12T14:47:10;DESKTOP;retargeting_q3

@@ -1,0 +1,7 @@
+channel_code;channel_label;distribution_network
+WEB;Site internet et espace client;DIRECT
+TEL;Plateforme téléphonique;DIRECT
+AGENCE;Agences BPCE Assurances;RESEAU_PROPRE
+BANQUE;Réseau bancaire Groupe BPCE;RESEAU_GROUPE
+COURTIER;Courtiers partenaires;PARTENAIRES
+UNKNOWN;Canal non renseigné;INDETERMINE

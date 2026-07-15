@@ -1,0 +1,109 @@
+# Catalogue des sources du périmètre YODA (couches 1-3, documentation §6.2-6.4).
+# Chaque source alimente son dataset applicatif app_<source> ; les définitions
+# détaillées font l'objet d'un contrat de données par flux (voir
+# data_contract_impulse_contracts.yaml pour le modèle complet).
+
+sources:
+  impulse:
+    description: "Application de gestion des contrats IARD — source principale du domaine Contrat"
+    dataset: app_impulse
+    ingestion: "Mise à disposition fichiers BPCE-IT (quotidien, avant 05:00 UTC)"
+    classification: personnelle
+    flows:
+      raw_contracts:
+        file_pattern: "impulse/contracts/{YYYYMMDD}/impulse_contracts_{YYYYMMDD}.csv"
+        sample: data/samples/impulse_contracts_20260713.csv
+        fields: [contract_id, customer_id, product_code, status, start_date,
+                 end_date, annual_premium, channel_code, event_timestamp]
+
+  teccare:
+    description: "Application de gestion des sinistres — source principale du domaine Sinistre"
+    dataset: app_teccare
+    ingestion: "Mise à disposition fichiers BPCE-IT (quotidien)"
+    classification: personnelle
+    flows:
+      raw_claims:
+        file_pattern: "teccare/claims/{YYYYMMDD}/teccare_claims_{YYYYMMDD}.csv"
+        sample: data/samples/teccare_claims_20260713.csv
+        fields: [claim_id, contract_id, customer_id, claim_type, status,
+                 open_date, close_date, estimated_amount, paid_amount, event_timestamp]
+        status_values_source: [OUVERT, EN_EXPERTISE, CLOS, REOUVERT, SANS_SUITE]
+
+  genesys:
+    description: "Plateforme de gestion des interactions clients (téléphonie, chat, email)"
+    dataset: app_genesys
+    ingestion: "Ingestion LUCI - BPCE-SI (quotidien)"
+    classification: personnelle
+    flows:
+      raw_interactions:
+        file_pattern: "genesys/interactions/{YYYYMMDD}/genesys_interactions_{YYYYMMDD}.csv"
+        sample: data/samples/genesys_interactions_20260713.csv
+        fields: [interaction_id, customer_id, channel, direction,
+                 start_timestamp, duration_seconds, reason_code, agent_id]
+
+  adobe_analytics:
+    description: "Données d'usage et de navigation web (site public et espace client)"
+    dataset: app_adobe_analytics
+    ingestion: "Ingestion LUCI - BPCE-SI (quotidien)"
+    classification: personnelle    # visitor_id + customer_id rapprochés
+    flows:
+      raw_web_events:
+        file_pattern: "adobe/web_events/{YYYYMMDD}/adobe_web_events_{YYYYMMDD}.csv"
+        sample: data/samples/adobe_web_events_20260713.csv
+        fields: [event_id, visitor_id, customer_id, page, event_type,
+                 event_timestamp, device, campaign]
+
+  bpce_iard:
+    description: "Contrats IARD distribués par le réseau bancaire Groupe"
+    dataset: app_bpce_iard
+    ingestion: "Ingestion LUCI - BPCE-SI (quotidien)"
+    classification: personnelle
+    flows:
+      raw_contracts:
+        file_pattern: "bpce_iard/contracts/{YYYYMMDD}/bpce_iard_contracts_{YYYYMMDD}.csv"
+        sample: data/samples/bpce_iard_contracts_20260713.csv
+        fields: [contract_id, customer_id, product_code, status, start_date,
+                 end_date, annual_premium, channel_code, event_timestamp]
+        note: "Même structure logique qu'Impulse — union prévue dans enterprise_contract (lot ultérieur)"
+
+  partners:
+    description: "Fichiers transmis par les partenaires (courtiers, délégations de gestion)"
+    dataset: app_partners
+    ingestion: "Mise à disposition fichiers BPCE-IT (hebdomadaire ou à réception)"
+    classification: personnelle
+    flows:
+      raw_partner_flows:
+        file_pattern: "partners/{partner_code}/{YYYYMMDD}/partner_flows_{YYYYMMDD}.csv"
+        sample: data/samples/partner_flows_20260713.csv
+        fields: [partner_code, policy_ref, insured_id, product_code, premium,
+                 period_start, period_end, file_date]
+
+  opendata:
+    description: "Référentiels publics (communes INSEE, géographie) pour enrichissement"
+    dataset: app_opendata
+    ingestion: "Téléchargement contrôlé (mensuel)"
+    classification: publique
+    flows:
+      raw_communes:
+        file_pattern: "opendata/communes/communes.csv"
+        sample: data/samples/opendata_communes.csv
+        fields: [code_insee, commune, code_departement, departement,
+                 code_region, region, population]
+
+referentials:
+  products:
+    dataset: enterprise_referential
+    table: products
+    sample: data/samples/referential_products.csv
+    fields: [product_code, product_family, product_label]
+  organisation:
+    dataset: enterprise_referential
+    table: organisation
+    sample: data/samples/referential_organisation.csv
+    fields: [channel_code, channel_label, distribution_network]
+
+# État d'avancement par domaine (migration par cas d'usage, doc §18.1) :
+#   contrat     : chaîne complète raw -> staging -> entreprise -> produit -> usage (lot pilote)
+#   sinistre    : chaîne complète raw -> staging -> entreprise -> produit -> usage
+#   interaction : raw -> entreprise (produit à cadrer avec le métier)
+#   bpce_iard / partners / opendata : raw chargé, transformation dans les lots suivants

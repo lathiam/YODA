@@ -12,7 +12,8 @@ continue (déclencheur Cloud Build, l'app GitHub étant déjà installée).
 ```bash
 git clone https://github.com/lathiam/YODA.git && cd YODA
 git checkout claude/technical-setup-hzjojy
-bash scripts/deploy_gcp.sh dev
+bash scripts/deploy_gcp.sh dev      # infrastructure (datasets, buckets, IAM)
+bash scripts/seed_bigquery.sh dev   # données simulées : 7 sources + chaînes complètes
 ```
 
 Le script active les APIs, crée le bucket d'état Terraform, applique
@@ -52,13 +53,21 @@ done
 
 ## Ce qui est déployé
 
-| Ressource | Nom | Rôle |
+| Ressource | Contenu | Rôle |
 |---|---|---|
-| Datasets BigQuery | `app_impulse`, `enterprise_referential`, `enterprise_contract`, `product_contract`, `usage_bi`, `ops` | les couches de l'architecture |
-| Tables | `product_contract.active_contracts_daily` (partitionnée/clusterisée), `ops.rejects`, `ops.pipeline_runs` | produit Data + exploitation |
+| Datasets applicatifs | `app_impulse`, `app_teccare`, `app_genesys`, `app_adobe_analytics`, `app_bpce_iard`, `app_partners`, `app_opendata` | couche 3 — un dataset par source |
+| Datasets entreprise | `enterprise_referential`, `enterprise_contract`, `enterprise_claim`, `enterprise_interaction`, `enterprise_finance`, `enterprise_transverse` | couche 5 — un dataset par domaine |
+| Datasets produits | `product_contract`, `product_claim` | couche 6 — produits Data gouvernés |
+| Datasets d'usage | `usage_bi`, `usage_datascience`, `usage_app` | couche 7 — un dataset par type de consommateur |
+| Tables d'exploitation | `ops.rejects`, `ops.pipeline_runs` | rejets motivés + journal des exécutions |
 | Buckets | `<projet>-landing`, `<projet>-archive`, `<projet>-tfstate` | arrivée fichiers, archivage, état Terraform |
 | IAM | `yoda-pipeline-<env>` + rôles minimaux | compte de service des pipelines |
-| Données | `enterprise_referential.products` + fichier d'exemple dans le landing | prêt à exécuter le flux |
+
+Le script `seed_bigquery.sh` alimente ensuite le tout avec les données simulées
+(`data/samples/`, catalogue dans `schemas/sources_catalog.yaml`) : les 7 raw,
+les référentiels, puis les chaînes complètes Contrats, Sinistres et Interactions
+(staging → entreprise → produit → vues d'usage), y compris les rejets dans
+`ops.rejects` et le journal dans `ops.pipeline_runs`.
 
 ## Et l'orchestration Composer ?
 

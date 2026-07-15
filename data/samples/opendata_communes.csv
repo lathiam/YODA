@@ -1,0 +1,11 @@
+code_insee;commune;code_departement;departement;code_region;region;population
+75056;Paris;75;Paris;11;Île-de-France;2145906
+13055;Marseille;13;Bouches-du-Rhône;93;Provence-Alpes-Côte d'Azur;873076
+69123;Lyon;69;Rhône;84;Auvergne-Rhône-Alpes;522969
+31555;Toulouse;31;Haute-Garonne;76;Occitanie;498003
+06088;Nice;06;Alpes-Maritimes;93;Provence-Alpes-Côte d'Azur;342669
+44109;Nantes;44;Loire-Atlantique;52;Pays de la Loire;320732
+34172;Montpellier;34;Hérault;76;Occitanie;295542
+67482;Strasbourg;67;Bas-Rhin;44;Grand Est;284677
+33063;Bordeaux;33;Gironde;75;Nouvelle-Aquitaine;260958
+59350;Lille;59;Nord;32;Hauts-de-France;236234
