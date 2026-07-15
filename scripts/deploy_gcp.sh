@@ -19,6 +19,22 @@ fi
 
 echo "== Déploiement YODA — environnement=${ENV} projet=${PROJECT_ID} région=${REGION} =="
 
+echo "== 0/5 Vérification de Terraform =="
+# Cloud Shell ne fournit plus Terraform : un shim affiche des instructions et
+# rend 0. On vérifie donc que le binaire répond réellement, sinon on installe
+# une version locale dans ~/bin (persistant entre les sessions Cloud Shell).
+export PATH="${HOME}/bin:${PATH}"
+if ! terraform version 2>/dev/null | grep -q "^Terraform v"; then
+  TF_VERSION="1.9.8"
+  echo "Terraform absent — installation locale de la version ${TF_VERSION} dans ~/bin"
+  mkdir -p "${HOME}/bin"
+  curl -sSL -o /tmp/terraform.zip \
+    "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip"
+  unzip -o -q /tmp/terraform.zip -d "${HOME}/bin"
+  rm -f /tmp/terraform.zip
+fi
+terraform version | head -1
+
 echo "== 1/5 Activation des APIs nécessaires =="
 gcloud services enable \
   bigquery.googleapis.com \
