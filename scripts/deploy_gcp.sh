@@ -50,10 +50,25 @@ gcloud storage buckets describe "gs://${PROJECT_ID}-tfstate" --project "${PROJEC
 
 echo "== 3/5 Infrastructure (datasets, tables ops, buckets, IAM) =="
 terraform -chdir=infra init -backend-config="bucket=${PROJECT_ID}-tfstate"
-terraform -chdir=infra apply -auto-approve \
-  -var "project_id=${PROJECT_ID}" \
-  -var "environment=${ENV}" \
-  -var "region=${REGION}"
+# Le réseau de Cloud Shell peut refuser ponctuellement des connexions vers les
+# APIs Google ("connection refused"). Terraform étant idempotent, on retente
+# jusqu'à 3 fois : chaque passage ne traite que ce qui manque.
+apply_ok=0
+for attempt in 1 2 3; do
+  if terraform -chdir=infra apply -auto-approve \
+      -var "project_id=${PROJECT_ID}" \
+      -var "environment=${ENV}" \
+      -var "region=${REGION}"; then
+    apply_ok=1
+    break
+  fi
+  echo "!! terraform apply a échoué (tentative ${attempt}/3) — nouvel essai dans 15s..."
+  sleep 15
+done
+if [ "${apply_ok}" -ne 1 ]; then
+  echo "terraform apply en échec après 3 tentatives — voir les erreurs ci-dessus." >&2
+  exit 1
+fi
 
 echo "== 4/5 Référentiel produits + fichier d'exemple dans le landing =="
 bq --project_id="${PROJECT_ID}" load --replace \
